@@ -191,6 +191,8 @@ def publicar(message=None, repo_dir=None):
         _config_basico(repo)
 
     # 2) git add .
+    # Fase 2: garante que backup.js (modificacoes) NUNCA seja publicado (vive so no Supabase).
+    _run([GIT_EXE, "rm", "--cached", "--ignore-unmatch", "--", "backup.js"], cwd=repo, check=False)
     print("[1/3] git add .")
     _run([GIT_EXE, "add", "."], cwd=repo)
 

@@ -154,7 +154,7 @@
     lastSavedJson = js;
     status('Salvo ' + new Date().toLocaleTimeString('pt-BR'));
   }
-  function agendarSalvar() { clearTimeout(saveTimer); saveTimer = setTimeout(salvar, 1200); }
+  function agendarSalvar() { clearTimeout(saveTimer); saveTimer = setTimeout(salvar, 8000); }
 
   // O app chama salvarEstado() apos cada alteracao (originalmente vazio).
   window.salvarEstado = function () { agendarSalvar(); };
@@ -194,7 +194,7 @@
     });
 
     // Rede de seguranca: salva mudancas nao capturadas (ex.: pendencias)
-    setInterval(function () { try { salvar(); } catch (_) {} }, 20000);
+    setInterval(function () { try { salvar(); } catch (_) {} }, 180000);
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') { try { salvar(); } catch (_) {} } });
   }
 
