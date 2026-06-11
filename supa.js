@@ -10,9 +10,10 @@
 
   var SUPABASE_URL = "https://pyrniqluywejmgzqkari.supabase.co";
   var SUPABASE_KEY = "sb_publishable_fXWQGDirOvs5xfxZDaSOtg_Jgd7vcbu";
+  var RECOVERY_URL = "https://lucasabnersd-ai.github.io/SE2LUCAS/";
   var ROW_ID = "main";
 
-  var sb = null, sessionUser = null, saveTimer = null, lastSavedJson = "", carregado = false;
+  var sb = null, sessionUser = null, saveTimer = null, lastSavedJson = "", carregado = false, recoveryMode = false;
 
   // ---------- util UI ----------
   function el(tag, css, html) {
@@ -39,6 +40,7 @@
       '<label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Senha</label>' +
       '<input id="se2-pass" type="password" autocomplete="current-password" style="width:100%;padding:9px 11px;margin:4px 0 14px;border:1px solid #dde1ee;border-radius:7px;font-size:14px">' +
       '<button id="se2-btn-entrar" style="width:100%;padding:10px;border:none;border-radius:7px;background:#2563eb;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Entrar</button>' +
+      '<button id="se2-btn-recuperar" style="width:100%;padding:7px;margin-top:6px;border:none;background:transparent;color:#2563eb;font-weight:600;font-size:12.5px;cursor:pointer">Esqueci minha senha</button>' +
       '<button id="se2-btn-criar" style="width:100%;padding:9px;margin-top:8px;border:1px solid #2563eb;border-radius:7px;background:#fff;color:#2563eb;font-weight:600;font-size:13px;cursor:pointer">Criar conta (1ª vez)</button>' +
       '<div id="se2-msg" style="font-size:12.5px;color:#b91c1c;margin-top:10px;min-height:16px"></div>' +
       '<div style="font-size:11px;color:#94a3b8;margin-top:6px;line-height:1.4">Suas marcações ficam salvas na nuvem e sincronizam entre dispositivos.</div>' +
@@ -55,6 +57,14 @@
       var r = await sb.auth.signInWithPassword(c);
       if (r.error) { setMsg('E-mail ou senha inválidos.'); return; }
     };
+    o.querySelector('#se2-btn-recuperar').onclick = async function () {
+      var email = (o.querySelector('#se2-email').value || '').trim();
+      if (!email) { setMsg('Preencha o e-mail para recuperar a senha.'); return; }
+      setMsg('Enviando e-mail de recuperação…', true);
+      var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: RECOVERY_URL });
+      if (r.error) { setMsg('Não foi possível enviar o e-mail: ' + r.error.message); return; }
+      setMsg('E-mail enviado. Abra o link recebido para criar uma nova senha.', true);
+    };
     o.querySelector('#se2-btn-criar').onclick = async function () {
       var c = creds(); if (!c.email || !c.password) { setMsg('Preencha e-mail e senha.'); return; }
       if (c.password.length < 6) { setMsg('A senha precisa de ao menos 6 caracteres.'); return; }
@@ -70,6 +80,51 @@
   }
   function showLogin(t) { var o = overlay(); o.style.display = 'flex'; if (t && o._setMsg) o._setMsg(t); }
   function hideLogin() { var o = document.getElementById('se2-login'); if (o) o.style.display = 'none'; }
+
+  function showPasswordReset(user) {
+    recoveryMode = true;
+    hideLogin();
+    var old = document.getElementById('se2-password-reset');
+    if (old) old.remove();
+    var o = el('div', 'position:fixed;inset:0;z-index:1000000;background:linear-gradient(135deg,#1e2340,#2d3a6e);' +
+      'display:flex;align-items:center;justify-content:center;font-family:Segoe UI,Arial,sans-serif');
+    o.id = 'se2-password-reset';
+    o.innerHTML =
+      '<div style="background:#fff;border-radius:14px;padding:28px 26px;width:340px;box-shadow:0 12px 40px rgba(0,0,0,.35)">' +
+      '<div style="font-size:18px;font-weight:700;color:#1e2340;margin-bottom:5px">Criar nova senha</div>' +
+      '<div style="font-size:12px;color:#64748b;margin-bottom:16px">' + ((user && user.email) || '') + '</div>' +
+      '<label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Nova senha</label>' +
+      '<input id="se2-new-pass" type="password" autocomplete="new-password" style="width:100%;padding:9px 11px;margin:4px 0 12px;border:1px solid #dde1ee;border-radius:7px;font-size:14px">' +
+      '<label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Confirmar nova senha</label>' +
+      '<input id="se2-new-pass-confirm" type="password" autocomplete="new-password" style="width:100%;padding:9px 11px;margin:4px 0 14px;border:1px solid #dde1ee;border-radius:7px;font-size:14px">' +
+      '<button id="se2-btn-salvar-senha" style="width:100%;padding:10px;border:none;border-radius:7px;background:#2563eb;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Salvar nova senha</button>' +
+      '<div id="se2-reset-msg" style="font-size:12.5px;color:#b91c1c;margin-top:10px;min-height:16px"></div>' +
+      '</div>';
+    document.body.appendChild(o);
+    var msg = o.querySelector('#se2-reset-msg');
+    function setMsg(t, ok) { msg.textContent = t || ''; msg.style.color = ok ? '#15803d' : '#b91c1c'; }
+    async function saveNewPassword() {
+      var pass = o.querySelector('#se2-new-pass').value || '';
+      var confirm = o.querySelector('#se2-new-pass-confirm').value || '';
+      if (pass.length < 6) { setMsg('A senha precisa de ao menos 6 caracteres.'); return; }
+      if (pass !== confirm) { setMsg('As senhas não conferem.'); return; }
+      setMsg('Salvando nova senha…', true);
+      var r = await sb.auth.updateUser({ password: pass });
+      if (r.error) { setMsg('Erro ao alterar a senha: ' + r.error.message); return; }
+      setMsg('Senha alterada com sucesso.', true);
+      recoveryMode = false;
+      if (history.replaceState) history.replaceState(null, document.title, location.pathname);
+      setTimeout(function () {
+        o.remove();
+        if (r.data && r.data.user) onLogged(r.data.user);
+        else location.reload();
+      }, 700);
+    }
+    o.querySelector('#se2-btn-salvar-senha').onclick = saveNewPassword;
+    o.querySelector('#se2-new-pass-confirm').addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') saveNewPassword();
+    });
+  }
 
   function badge() {
     var b = document.getElementById('se2-sync');
@@ -183,15 +238,23 @@
     try { await loadLib(); } catch (e) { showLogin('Sem conexão para carregar o login. Verifique a internet.'); return; }
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
+    sb.auth.onAuthStateChange(function (evt, sess) {
+      if (evt === 'PASSWORD_RECOVERY') {
+        showPasswordReset(sess && sess.user);
+        return;
+      }
+      if (sess && sess.user && !recoveryMode) { if (!sessionUser) onLogged(sess.user); }
+    });
+
+    var recoveryInUrl = /(?:[?#&])type=recovery(?:[&#]|$)/i.test(location.href);
     var s = await sb.auth.getSession();
-    if (s.data && s.data.session && s.data.session.user) {
+    if (recoveryInUrl && s.data && s.data.session) {
+      showPasswordReset(s.data.session.user);
+    } else if (s.data && s.data.session && s.data.session.user) {
       onLogged(s.data.session.user);
     } else {
       showLogin('');
     }
-    sb.auth.onAuthStateChange(function (_evt, sess) {
-      if (sess && sess.user) { if (!sessionUser) onLogged(sess.user); }
-    });
 
     // Rede de seguranca: salva mudancas nao capturadas (ex.: pendencias)
     setInterval(function () { try { salvar(); } catch (_) {} }, 180000);
