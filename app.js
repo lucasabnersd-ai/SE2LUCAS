@@ -1338,7 +1338,7 @@ function downloadMON(){
 }
 
 // Ordenação por clique no cabeçalho
-const SORT_MAP = ['','empresa','tipo','num','parcela','razao','fornecedor','emissao','vencimento','vencReal','valor','saldo','status','atraso','baixa','historico','valLiqBaix','numBordero','dtBordero','dtLiberacao','tipoPgto','cnpj','uuid','usrIncName','usrIncDate','usrAltName','usrAltDate',''];
+const SORT_MAP = ['','empresa','tipo','num','parcela','razao','fornecedor','codFornec','emissao','vencimento','vencReal','valor','saldo','status','natureza','baixa','historico','valLiqBaix','numBordero','dtBordero','dtLiberacao','tipoPgto','cnpj','uuid','usrIncName','usrIncDate','usrAltName','usrAltDate',''];
 let sortKey=null, sortAsc=true;
 const PAGE_SIZE = 300;
 let currentPage = 1;
